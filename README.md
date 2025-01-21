@@ -1,0 +1,3 @@
+- gather the images from a host and a hash table for it
+- lookup dockerhub API for new images and compare it with current running container's image hash
+- create the new RSS feed for that
