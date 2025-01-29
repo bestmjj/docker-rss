@@ -11,16 +11,16 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func getCurrentHash(ctx context.Context, cli *client.Client, imageName string) string {
+func getCurrentHash(ctx context.Context, cli *client.Client, imageName string) (string, string) {
 	image, _, err := cli.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
 		log.Printf("Error inspecting image %s: %v", imageName, err)
-		return ""
+		return "", ""
 	}
-	return image.ID
+	return image.Architecture, image.RepoDigests[0]
 }
 
-func getLatestHash(namespace, repository, tag string) (string, error) {
+func getLatestHash(namespace, repository, tag, architecture string) (string, error) {
 	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags/%s", namespace, repository, tag)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -44,9 +44,11 @@ func getLatestHash(namespace, repository, tag string) (string, error) {
 		return "", err
 	}
 
-	if len(repo.Images) > 0 {
-		return repo.Images[0].Digest, nil
+	for _, image := range repo.Images {
+		if image.Architecture == architecture {
+			return image.Digest, nil
+		}
 	}
 
-	return "", fmt.Errorf("no images found")
+	return "", fmt.Errorf("no images found for architecture: %s", architecture)
 }

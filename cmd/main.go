@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
+	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"gorm.io/gorm"
 )
 
 type ImageUpdate struct {
+	gorm.Model
 	ImageName       string
 	CurrentHash     string
 	LatestHash      string
@@ -17,7 +22,8 @@ type ImageUpdate struct {
 }
 
 type Image struct {
-	Digest string `json:"digest"`
+	Architecture string `json:"architecture"`
+	Digest       string `json:"digest"`
 }
 
 type Repository struct {
@@ -27,6 +33,33 @@ type Repository struct {
 }
 
 var repository, tag, namespace string
+
+func updates(containers []types.Container, ctx context.Context, cli *client.Client) []ImageUpdate {
+	var updates []ImageUpdate
+
+	for _, container := range containers {
+		namespace, repository, tag := parseImageName(container.Image)
+		imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
+		arch, currentHash := getCurrentHash(ctx, cli, imageName)
+
+		latestHash, err := getLatestHash(namespace, repository, tag, arch)
+		// fmt.Printf("current hash for %s is: %s", container.Image, currentHash)
+		// fmt.Printf("latest hash for %s is: %s", container.Image, latestHash)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		updateAvailable := currentHash != latestHash
+		updates = append(updates, ImageUpdate{
+			ImageName:       imageName,
+			CurrentHash:     currentHash,
+			LatestHash:      latestHash,
+			UpdateAvailable: updateAvailable,
+		})
+	}
+
+	return updates
+}
 
 func main() {
 	ctx := context.Background()
@@ -40,25 +73,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var updates []ImageUpdate
 
-	for _, container := range containers {
-		namespace, repository, tag := parseImageName(container.Image)
-		imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
-		currentHash := getCurrentHash(ctx, cli, imageName)
+	initFeed()
+	initDB()
+	loadFeedFromDB()
 
-		latestHash, err := getLatestHash(namespace, repository, tag)
-		if err != nil {
-			log.Fatal(err)
+	http.HandleFunc("/feed", feedHandler)
+
+	go func() {
+		imageUpdate := updates(containers, ctx, cli)
+		generateRSSFeed(imageUpdate)
+
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			imageUpdate = updates(containers, ctx, cli)
+			generateRSSFeed(imageUpdate)
 		}
-		updateAvailable := currentHash != latestHash
-		updates = append(updates, ImageUpdate{
-			ImageName:       imageName,
-			CurrentHash:     currentHash,
-			LatestHash:      latestHash,
-			UpdateAvailable: updateAvailable,
-		})
-	}
+	}()
 
-	generateRSSFeed(updates)
+	fmt.Println("Server is running on http://localhost:8083/feed")
+	log.Fatal(http.ListenAndServe("0.0.0.0:8083", nil))
 }

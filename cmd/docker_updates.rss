@@ -4,36 +4,36 @@
     <link>http://localhost</link>
     <description>RSS feed for Docker image updates</description>
     <managingEditor>updater@localhost (Docker Updater)</managingEditor>
-    <pubDate>Tue, 21 Jan 2025 18:14:54 +0530</pubDate>
+    <pubDate>Wed, 22 Jan 2025 13:36:28 +0530</pubDate>
     <item>
       <title>Update available for library/adminer:latest</title>
       <link>http://localhost</link>
       <description>Current Hash: sha256:fd3b195a8d7922d460ebcfd81eb1e073dbe520b22309013628baed8ce61d0b3c, Latest Hash: sha256:7b346bacc32a9fc9f0d434d0e14c875b9ec54c82b3ea47a87c925389291e67d1</description>
-      <pubDate>Tue, 21 Jan 2025 18:14:54 +0530</pubDate>
+      <pubDate>Wed, 22 Jan 2025 13:36:28 +0530</pubDate>
     </item>
     <item>
       <title>Update available for library/mysql:8.3.0</title>
       <link>http://localhost</link>
       <description>Current Hash: sha256:6f343283ab56d883ec8ea17641b5d61d0252cc6c97dad3849cf3681dd1e2f37d, Latest Hash: sha256:f9097d95a4ba5451fff79f4110ea6d750ac17ca08840f1190a73320b84ca4c62</description>
-      <pubDate>Tue, 21 Jan 2025 18:14:54 +0530</pubDate>
+      <pubDate>Wed, 22 Jan 2025 13:36:28 +0530</pubDate>
     </item>
     <item>
       <title>Update available for timberio/vector:0.42.0-debian</title>
       <link>http://localhost</link>
       <description>Current Hash: sha256:d4e003b0a43c8f4b41b77df0d19def6707c263a11108e43f87b1e194e9fe9cfc, Latest Hash: sha256:951b52817c079fcf46a82156eeebf6b059e30476a3003072cdfcce68200951ab</description>
-      <pubDate>Tue, 21 Jan 2025 18:14:54 +0530</pubDate>
+      <pubDate>Wed, 22 Jan 2025 13:36:28 +0530</pubDate>
     </item>
     <item>
       <title>Update available for grafana/grafana:latest</title>
       <link>http://localhost</link>
       <description>Current Hash: sha256:de903bc9ce7c4e27fd447a72849506b3bcebd10a87aab770696442502152bfb5, Latest Hash: sha256:8d938a1c52b018c60cb3583657e038054387aa18a74f09a865c99a522481f7ac</description>
-      <pubDate>Tue, 21 Jan 2025 18:14:54 +0530</pubDate>
+      <pubDate>Wed, 22 Jan 2025 13:36:28 +0530</pubDate>
     </item>
     <item>
       <title>Update available for grafana/loki:latest</title>
       <link>http://localhost</link>
       <description>Current Hash: sha256:6dc62b6208730e251e7d28b91b8e2d9cf6c5325d7e2f66d988661846f2de55a8, Latest Hash: sha256:38bf9e926143eaf04b547aa7cf754124013de637ecf8afd573add5c7908684e5</description>
-      <pubDate>Tue, 21 Jan 2025 18:14:54 +0530</pubDate>
+      <pubDate>Wed, 22 Jan 2025 13:36:28 +0530</pubDate>
     </item>
   </channel>
 </rss>
