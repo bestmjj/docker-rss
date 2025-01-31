@@ -8,6 +8,8 @@ Unfortunately, none of them provide an RSS feed which I mainly use for keeping t
 
 ## Deploy
 
+Currently, the way it detects the updates is by first mounting the `/var/run/docker.sock` socket on the `docker-rss` container which will then detect all the running containers and thereby schedule the image update scans from dockerhub.
+
 A ready-to-use `docker-compose.yaml` is available with only one environment variable to worry about: `UPDATE_SCHEDULE`.
 
 `UPDATE_SCHEDULE` is your regular cron expression which can be adjusted accordingly.
