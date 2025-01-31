@@ -11,12 +11,10 @@ import (
 	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/robfig/cron/v3"
-	"gorm.io/gorm"
+	"gofr.dev/pkg/gofr"
 )
 
 type ImageUpdate struct {
-	gorm.Model
 	ImageName       string
 	CurrentHash     string
 	LatestHash      string
@@ -37,23 +35,25 @@ type Repository struct {
 	Images  []Image `json:"images"`
 }
 
-func updates(containers []types.Container, ctx context.Context, cli *client.Client) []ImageUpdate {
+func updates(containers []types.Container, ctx context.Context, cli *client.Client, c *gofr.Context) []ImageUpdate {
 	var updates []ImageUpdate
 
 	for _, container := range containers {
-		namespace, repository, tag := parseImageName(container.Image)
+		namespace, repository, tag := parseImageName(container.Image, c)
+
+		// a very unreliable hack to exclude an image which is not on dockerhub
+		if strings.Contains(container.Image, "docker-rss") {
+			continue
+		}
 		imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
 		currentHash, arch, imageCreated := getCurrentHash(ctx, cli, imageName)
 
-		latestHash, err := getLatestHash(namespace, repository, tag)
-		fmt.Println("namespace: ", namespace)
-		fmt.Println("repository: ", repository)
-		fmt.Println("tag: ", tag)
-		fmt.Println("arch: ", arch)
+		c.Logf("checking updates for %s", imageName)
+		latestHash, err := getLatestHash(namespace, repository, tag, c)
+		c.Logf("namespace: %s, repository: %s, tag: %s, arch: %s", namespace, repository, tag, arch)
 
-		fmt.Printf("current hash for %s is: %s", container.Image, currentHash)
-		fmt.Printf("latest hash for %s is: %s", container.Image, latestHash)
-		fmt.Println("tag: ", tag)
+		c.Logf("current hash for %s is: %s", container.Image, currentHash)
+		c.Logf("latest hash for %s is: %s", container.Image, latestHash)
 
 		if err != nil {
 			log.Fatal(err)
@@ -90,37 +90,17 @@ func main() {
 	initFeed()
 	http.HandleFunc("/feed", feedHandler)
 
-	// go func() {
-	// 	imageUpdate := updates(containers, ctx, cli)
-	// 	generateRSSFeed(imageUpdate)
-
-	// 	ticker := time.NewTicker(30 * time.Hour)
-	// 	defer ticker.Stop()
-	// 	for range ticker.C {
-	// 		imageUpdate = updates(containers, ctx, cli)
-	// 		generateRSSFeed(imageUpdate)
-	// 	}
-	// }()
-
-	// fmt.Println("Server is running on http://localhost:8083/feed")
-	// log.Fatal(http.ListenAndServe("0.0.0.0:8083", nil))
-
 	go func() {
-		log.Fatal(http.ListenAndServe(":8083", nil))
+		log.Fatal(http.ListenAndServe("0.0.0.0:8083", nil))
 	}()
 
-	cronSchedule := os.Getenv("UPDATE_SCHEDULE")
-	if cronSchedule == "" {
-		log.Println("cron not found")
-		cronSchedule = "0 */24 * * * *"
-	}
+	app := gofr.New()
+	app.Logger().Log("docker-rss updater server started at 0.0.0.0:8083...")
 
-	c := cron.New()
-
-	c.AddFunc(cronSchedule, func() {
-		imageUpdate := updates(containers, ctx, cli)
-		generateRSSFeed(imageUpdate)
+	app.AddCronJob(os.Getenv("UPDATE_SCHEDULE"), "cron-dockerss", func(c *gofr.Context) {
+		imageUpdate := updates(containers, ctx, cli, c)
+		generateRSSFeed(imageUpdate, c)
 	})
 
-	c.Start()
+	app.Run()
 }

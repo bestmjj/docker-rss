@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/feeds"
+	"gofr.dev/pkg/gofr"
 	"golang.org/x/exp/rand"
 )
 
@@ -25,12 +26,13 @@ func initFeed() {
 	}
 }
 
-func generateRSSFeed(updates []ImageUpdate) {
+func generateRSSFeed(updates []ImageUpdate, c *gofr.Context) {
 	feedMutex.Lock()
 	defer feedMutex.Unlock()
 
 	for _, update := range updates {
 		if update.UpdateAvailable {
+			c.Logf("update available for %s", update.ImageName)
 			uniqueID := fmt.Sprintf("update-%s-%d-%d", update.ImageName, time.Now().UnixNano(), rand.Intn(10000))
 			feed.Items = append(feed.Items, &feeds.Item{
 				Title:       fmt.Sprintf("Update available for %s", update.ImageName),
