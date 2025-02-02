@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
@@ -37,38 +38,54 @@ type Repository struct {
 
 func updates(containers []types.Container, ctx context.Context, cli *client.Client, c *gofr.Context) []ImageUpdate {
 	var updates []ImageUpdate
+	var wg sync.WaitGroup
+	results := make(chan ImageUpdate, len(containers))
 
 	for _, container := range containers {
-		namespace, repository, tag := parseImageName(container.Image, c)
+		wg.Add(1)
+		go func(container types.Container) {
+			defer wg.Done()
 
-		// a very unreliable hack to exclude an image which is not on dockerhub
-		if strings.Contains(container.Image, "docker-rss") {
-			continue
-		}
-		imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
-		currentHash, arch, imageCreated := getCurrentHash(ctx, cli, imageName)
+			namespace, repository, tag := parseImageName(container.Image, c)
 
-		c.Logf("checking updates for %s", imageName)
-		latestHash, err := getLatestHash(namespace, repository, tag, c)
-		c.Logf("namespace: %s, repository: %s, tag: %s, arch: %s", namespace, repository, tag, arch)
+			// a very unreliable hack to exclude an image which is not on dockerhub
+			if strings.Contains(container.Image, "docker-rss") {
+				return
+			}
+			imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
+			currentHash, arch, imageCreated := getCurrentHash(ctx, cli, imageName)
 
-		c.Logf("current hash for %s is: %s", container.Image, currentHash)
-		c.Logf("latest hash for %s is: %s", container.Image, latestHash)
+			c.Logf("checking updates for %s", imageName)
+			latestHash, err := getLatestHash(namespace, repository, tag, c)
+			c.Logf("namespace: %s, repository: %s, tag: %s, arch: %s", namespace, repository, tag, arch)
 
-		if err != nil {
-			log.Fatal(err)
-		}
+			c.Logf("current hash for %s is: %s", container.Image, currentHash)
+			c.Logf("latest hash for %s is: %s", container.Image, latestHash)
 
-		updateAvailable := strings.SplitN(currentHash, ":", 2)[1] != strings.SplitN(latestHash, ":", 2)[1]
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		updates = append(updates, ImageUpdate{
-			ImageName:       imageName,
-			CurrentHash:     currentHash,
-			LatestHash:      latestHash,
-			UpdateAvailable: updateAvailable,
-			Architecture:    arch,
-			ImageCreated:    imageCreated,
-		})
+			updateAvailable := strings.SplitN(currentHash, ":", 2)[1] != strings.SplitN(latestHash, ":", 2)[1]
+
+			results <- ImageUpdate{
+				ImageName:       imageName,
+				CurrentHash:     currentHash,
+				LatestHash:      latestHash,
+				UpdateAvailable: updateAvailable,
+				Architecture:    arch,
+				ImageCreated:    imageCreated,
+			}
+		}(container)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for result := range results {
+		updates = append(updates, result)
 	}
 
 	return updates

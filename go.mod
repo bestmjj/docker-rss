@@ -3,7 +3,7 @@ module docker-rss
 go 1.23.1
 
 require (
-	github.com/docker/docker v27.5.0+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/gorilla/feeds v1.2.0
 	gofr.dev v1.32.0
 	golang.org/x/exp v0.0.0-20250128182459-e0ece0dbea4c
