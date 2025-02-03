@@ -1,8 +1,6 @@
 services:
   docker-rss:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: vector450/docker-rss:latest
     container_name: docker-rss
     ports:
       - "8083:8083"

@@ -10,7 +10,20 @@ Unfortunately, none of them provide an RSS feed which I mainly use for keeping t
 
 Currently, the way it detects the updates is by first mounting the `/var/run/docker.sock` socket on the `docker-rss` container which will then detect all the running containers and thereby schedule the image update scans from dockerhub.
 
-A ready-to-use `docker-compose.yaml` is available with only one environment variable to worry about: `UPDATE_SCHEDULE`.
+`docker-compose.yaml`:
+
+```YAML
+services:
+  docker-rss:
+    image: vector450/docker-rss:latest
+    container_name: docker-rss
+    ports:
+      - "8083:8083"
+    environment:
+      - UPDATE_SCHEDULE=* * * * *
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+```
 
 `UPDATE_SCHEDULE` is your regular cron expression which can be adjusted accordingly.
 
@@ -21,13 +34,6 @@ docker compose up -d
 ```
 
 After the server starts, add it as a feed to your favorite RSS reader. Add the `/feed` at the end of the URL, that's where the feeds are published.
-
-## TODO
-
-- support different registries
-- properly detect images which are local only
-- write tests
-- ...
 
 ## License
 
