@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: docker-rss
     ports:
       - "8083:8083"
     environment:

@@ -36,6 +36,18 @@ type Repository struct {
 	Images  []Image `json:"images"`
 }
 
+var offlineImages = make(map[string]bool)
+
+func checkOffline(container types.Container, namespace, repository, tag string, c *gofr.Context) bool {
+	statusCode, _ := pingDockerhub(namespace, repository, tag)
+	if statusCode == http.StatusNotFound {
+		offlineImages[container.Image] = true
+		c.Logf("image %s is not available on dockerhub. likely local image.", container.Image)
+		return true
+	}
+	return false
+}
+
 func updates(containers []types.Container, ctx context.Context, cli *client.Client, c *gofr.Context) []ImageUpdate {
 	var updates []ImageUpdate
 	var wg sync.WaitGroup
@@ -48,10 +60,16 @@ func updates(containers []types.Container, ctx context.Context, cli *client.Clie
 
 			namespace, repository, tag := parseImageName(container.Image, c)
 
-			// a very unreliable hack to exclude an image which is not on dockerhub
-			if strings.Contains(container.Image, "docker-rss") {
+			// check for offline images
+			for range offlineImages {
+				if offlineImages[container.Image] {
+					return
+				}
+			}
+			if checkOffline(container, namespace, repository, tag, c) {
 				return
 			}
+
 			imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
 			currentHash, arch, imageCreated := getCurrentHash(ctx, cli, imageName)
 
@@ -101,7 +119,7 @@ func main() {
 
 	containers, err := cli.ContainerList(ctx, containertypes.ListOptions{})
 	if err != nil {
-		panic(err)
+		log.Fatal("panic containers: ", err)
 	}
 
 	initFeed()

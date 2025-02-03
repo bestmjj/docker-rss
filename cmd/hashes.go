@@ -56,3 +56,18 @@ func getLatestHash(namespace, repository, tag string, c *gofr.Context) (string, 
 
 	// return "", fmt.Errorf("no images found for architecture: %s", architecture)
 }
+
+func pingDockerhub(namespace, repository, tag string) (int, error) {
+	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags/%s", namespace, repository, tag)
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return resp.StatusCode, nil
+	}
+
+	return 0, nil
+}
