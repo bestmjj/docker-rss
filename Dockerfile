@@ -8,4 +8,5 @@ RUN go build -o main .
 
 FROM alpine:latest
 COPY --from=build /app/main /app/main
+RUN apk add tzdata
 CMD ["/app/main"]

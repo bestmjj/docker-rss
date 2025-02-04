@@ -5,6 +5,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      - UPDATE_SCHEDULE=* * * * *
+      - TZ=Asia/Singapore
+      - UPDATE_SCHEDULE=0 * * * * *
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

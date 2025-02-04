@@ -1,21 +1,20 @@
 package main
 
 import (
+	"log"
 	"strings"
-
-	"gofr.dev/pkg/gofr"
 )
 
-func parseImageName(imageName string, c *gofr.Context) (string, string, string) {
+func parseImageName(imageName string) (string, string, string) {
 	namespace := "library"
 	repository := ""
 	tag := "latest"
 
 	if !strings.Contains(imageName, "/") && !strings.Contains(imageName, ":") {
-		c.Logf("image [%s] does not have ns and tag", imageName)
+		log.Printf("image [%s] does not have ns and tag", imageName)
 		repository = imageName
 	} else if !strings.Contains(imageName, "/") {
-		c.Logf("image [%s] does not have ns", imageName)
+		log.Printf("image [%s] does not have ns", imageName)
 		parts := strings.SplitN(imageName, ":", 2)
 		repository = parts[0]
 		if len(parts) == 2 {

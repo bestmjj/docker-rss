@@ -12,7 +12,7 @@ import (
 	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"gofr.dev/pkg/gofr"
+	"github.com/robfig/cron"
 )
 
 type ImageUpdate struct {
@@ -38,17 +38,17 @@ type Repository struct {
 
 var offlineImages = make(map[string]bool)
 
-func checkOffline(container types.Container, namespace, repository, tag string, c *gofr.Context) bool {
+func checkOffline(container types.Container, namespace, repository, tag string) bool {
 	statusCode, _ := pingDockerhub(namespace, repository, tag)
 	if statusCode == http.StatusNotFound {
 		offlineImages[container.Image] = true
-		c.Logf("image %s is not available on dockerhub. likely local image.", container.Image)
+		log.Printf("image %s is not available on dockerhub. likely local image.", container.Image)
 		return true
 	}
 	return false
 }
 
-func updates(containers []types.Container, ctx context.Context, cli *client.Client, c *gofr.Context) []ImageUpdate {
+func updates(containers []types.Container, ctx context.Context, cli *client.Client) []ImageUpdate {
 	var updates []ImageUpdate
 	var wg sync.WaitGroup
 	results := make(chan ImageUpdate, len(containers))
@@ -58,7 +58,7 @@ func updates(containers []types.Container, ctx context.Context, cli *client.Clie
 		go func(container types.Container) {
 			defer wg.Done()
 
-			namespace, repository, tag := parseImageName(container.Image, c)
+			namespace, repository, tag := parseImageName(container.Image)
 
 			// check for offline images
 			for range offlineImages {
@@ -66,19 +66,19 @@ func updates(containers []types.Container, ctx context.Context, cli *client.Clie
 					return
 				}
 			}
-			if checkOffline(container, namespace, repository, tag, c) {
+			if checkOffline(container, namespace, repository, tag) {
 				return
 			}
 
 			imageName := fmt.Sprintf("%s/%s:%s", namespace, repository, tag)
 			currentHash, arch, imageCreated := getCurrentHash(ctx, cli, imageName)
 
-			c.Logf("checking updates for %s", imageName)
-			latestHash, err := getLatestHash(namespace, repository, tag, c)
-			c.Logf("namespace: %s, repository: %s, tag: %s, arch: %s", namespace, repository, tag, arch)
+			log.Printf("checking updates for %s", imageName)
+			latestHash, err := getLatestHash(namespace, repository, tag)
+			log.Printf("namespace: %s, repository: %s, tag: %s, arch: %s", namespace, repository, tag, arch)
 
-			c.Logf("current hash for %s is: %s", container.Image, currentHash)
-			c.Logf("latest hash for %s is: %s", container.Image, latestHash)
+			log.Printf("current hash for %s is: %s", container.Image, currentHash)
+			log.Printf("latest hash for %s is: %s", container.Image, latestHash)
 
 			if err != nil {
 				log.Fatal(err)
@@ -109,6 +109,10 @@ func updates(containers []types.Container, ctx context.Context, cli *client.Clie
 	return updates
 }
 
+func cronJob(containers []types.Container, ctx context.Context, cli *client.Client) {
+	imageUpdate := updates(containers, ctx, cli)
+	generateRSSFeed(imageUpdate)
+}
 func main() {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -129,13 +133,15 @@ func main() {
 		log.Fatal(http.ListenAndServe("0.0.0.0:8083", nil))
 	}()
 
-	app := gofr.New()
-	app.Logger().Log("docker-rss updater server started at 0.0.0.0:8083...")
+	log.Println("docker-rss server started at 0.0.0.0:8083...")
+	log.Printf("cronjob expression specified: %s", os.Getenv("UPDATE_SCHEDULE"))
 
-	app.AddCronJob(os.Getenv("UPDATE_SCHEDULE"), "cron-dockerss", func(c *gofr.Context) {
-		imageUpdate := updates(containers, ctx, cli, c)
-		generateRSSFeed(imageUpdate, c)
+	c := cron.New()
+
+	c.AddFunc(os.Getenv("UPDATE_SCHEDULE"), func() {
+		cronJob(containers, ctx, cli)
 	})
 
-	app.Run()
+	c.Start()
+	select {}
 }

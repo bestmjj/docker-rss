@@ -20,12 +20,12 @@ services:
     ports:
       - "8083:8083"
     environment:
-      - UPDATE_SCHEDULE=* * * * *
+      - UPDATE_SCHEDULE=0 * * * * *
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-`UPDATE_SCHEDULE` is your regular cron expression which can be adjusted accordingly.
+`UPDATE_SCHEDULE` is your regular cron expression (with seconds, if needed) which can be adjusted accordingly.
 
 Start the container:
 

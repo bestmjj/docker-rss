@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/docker/docker/client"
-	"gofr.dev/pkg/gofr"
 )
 
 func getCurrentHash(ctx context.Context, cli *client.Client, imageName string) (string, string, string) {
@@ -21,7 +20,7 @@ func getCurrentHash(ctx context.Context, cli *client.Client, imageName string) (
 	return image.RepoDigests[0], image.Architecture, image.Created
 }
 
-func getLatestHash(namespace, repository, tag string, c *gofr.Context) (string, error) {
+func getLatestHash(namespace, repository, tag string) (string, error) {
 	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags/%s", namespace, repository, tag)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -29,7 +28,7 @@ func getLatestHash(namespace, repository, tag string, c *gofr.Context) (string, 
 	}
 	defer resp.Body.Close()
 
-	c.Logf("checking on dockerhub: %s", url)
+	log.Printf("checking on dockerhub: %s", url)
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to fetch data: %s", resp.Status)
