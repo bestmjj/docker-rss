@@ -20,12 +20,14 @@ services:
     ports:
       - "8083:8083"
     environment:
+      - TZ=Asia/Singapore
       - UPDATE_SCHEDULE=0 * * * * *
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 
 `UPDATE_SCHEDULE` is your regular cron expression (with seconds, if needed) which can be adjusted accordingly.
+`TZ` is your timezone.
 
 Start the container:
 
