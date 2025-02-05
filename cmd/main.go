@@ -74,7 +74,7 @@ func updates(containers []types.Container, ctx context.Context, cli *client.Clie
 			currentHash, arch, imageCreated := getCurrentHash(ctx, cli, imageName)
 
 			log.Printf("checking updates for %s", imageName)
-			latestHash, err := getLatestHash(namespace, repository, tag)
+			latestHash, err := getLatestHash(namespace, repository, tag, arch)
 			log.Printf("namespace: %s, repository: %s, tag: %s, arch: %s", namespace, repository, tag, arch)
 
 			log.Printf("current hash for %s is: %s", container.Image, currentHash)

@@ -17,10 +17,11 @@ func getCurrentHash(ctx context.Context, cli *client.Client, imageName string) (
 		log.Printf("Error inspecting image %s: %v", imageName, err)
 		return "", "", ""
 	}
+	// TODO: loop over repodigests if more than one and compare with latestHash
 	return image.RepoDigests[0], image.Architecture, image.Created
 }
 
-func getLatestHash(namespace, repository, tag string) (string, error) {
+func getLatestHash(namespace, repository, tag, arch string) (string, error) {
 	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags/%s", namespace, repository, tag)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -45,11 +46,13 @@ func getLatestHash(namespace, repository, tag string) (string, error) {
 		return "", err
 	}
 
-	// for _, image := range repo.Images {
-	// 	if image.Architecture == architecture {
-	// 		return image.Digest, nil
-	// 	}
-	// }
+	if repo.Digest == "" {
+		for _, image := range repo.Images {
+			if image.Architecture == arch {
+				return image.Digest, nil
+			}
+		}
+	}
 
 	return repo.Digest, nil
 
