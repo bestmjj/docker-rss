@@ -13,7 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 )
 
 type ImageUpdate struct {
@@ -137,6 +137,7 @@ func cronJob(containers []types.Container, ctx context.Context, cli *client.Clie
 	updateImages(imageUpdate)
 	//generateRSSFeed(imageUpdate)
 }
+
 func main() {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -166,9 +167,18 @@ func main() {
 		log.Printf("cronjob expression specified: %s", updateSchedule)
 	}
 
-	// 创建 cron 实例并添加任务
-	c := cron.New()
-	err = c.AddFunc(updateSchedule, func() {
+	// 创建 cron 实例，明确指定时区（可选）
+	// 使用本地时区或指定时区，例如东八区
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		log.Printf("Error loading timezone, using UTC: %v", err)
+		loc = time.UTC
+	}
+	c := cron.New(cron.WithLocation(loc))
+	log.Printf("Cron scheduler using timezone: %s", loc.String())
+
+	// 添加任务并记录
+	_, err = c.AddFunc(updateSchedule, func() {
 		log.Printf("Running scheduled update check at %s", time.Now().Format(time.RFC3339))
 		cronJob(containers, ctx, cli)
 	})
@@ -176,10 +186,17 @@ func main() {
 		log.Fatalf("Error adding cron job with schedule '%s': %v", updateSchedule, err)
 	}
 
+	// 启动 cron 调度器
 	c.Start()
 	log.Println("Cron scheduler started with specified schedule")
+
+	// 打印下一个执行时间以便调试
+	entries := c.Entries()
+	if len(entries) > 0 {
+		nextRun := entries[0].Next
+		log.Printf("Next scheduled update check at: %s", nextRun.Format(time.RFC3339))
+	}
 
 	// 保持程序运行
 	select {}
 }
-
